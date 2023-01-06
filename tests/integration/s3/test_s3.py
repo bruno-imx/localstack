@@ -202,6 +202,39 @@ def s3_multipart_upload(s3_client):
 
 
 @pytest.fixture
+def s3_multipart_upload_with_snapshot(s3_client, snapshot):
+    def perform_multipart_upload(
+        bucket: str, key: str, data: bytes, snapshot_prefix: str, **kwargs
+    ):
+        create_multipart_resp = s3_client.create_multipart_upload(Bucket=bucket, Key=key, **kwargs)
+        snapshot.match(f"{snapshot_prefix}-create-multipart", create_multipart_resp)
+        upload_id = create_multipart_resp["UploadId"]
+
+        # Write contents to memory rather than a file.
+        upload_file_object = BytesIO(data)
+
+        response = s3_client.upload_part(
+            Bucket=bucket,
+            Key=key,
+            Body=upload_file_object,
+            PartNumber=1,
+            UploadId=upload_id,
+        )
+        snapshot.match(f"{snapshot_prefix}-upload-part", response)
+
+        response = s3_client.complete_multipart_upload(
+            Bucket=bucket,
+            Key=key,
+            MultipartUpload={"Parts": [{"ETag": response["ETag"], "PartNumber": 1}]},
+            UploadId=upload_id,
+        )
+        snapshot.match(f"{snapshot_prefix}-compete-multipart", response)
+        return response
+
+    return perform_multipart_upload
+
+
+@pytest.fixture
 def create_tmp_folder_lambda():
     cleanup_folders = []
 
@@ -2619,6 +2652,115 @@ class TestS3:
         assert proxied_response.headers["server"] == response.headers["server"]
         assert len(proxied_response.headers["server"].split(",")) == 1
         assert len(proxied_response.headers["date"].split(",")) == 2  # coma in the date
+
+    @pytest.mark.aws_validated
+    # there is currently no server side encryption is place in LS, ETag will be different
+    @pytest.mark.skip_snapshot_verify(paths=["$..ETag"])
+    @pytest.mark.skip_snapshot_verify(
+        condition=is_old_provider, paths=["$..ContentLanguage", "$..SSEKMSKeyId", "$..VersionId"]
+    )
+    def test_s3_multipart_upload_sse(
+        self,
+        s3_client,
+        s3_bucket,
+        s3_multipart_upload_with_snapshot,
+        kms_create_key,
+        snapshot,
+    ):
+        snapshot.add_transformer(
+            [
+                snapshot.transform.resource_name("SSEKMSKeyId"),
+                snapshot.transform.key_value(
+                    "Bucket", reference_replacement=False, value_replacement="<bucket>"
+                ),
+                snapshot.transform.key_value("UploadId"),
+                snapshot.transform.key_value("Location"),
+            ]
+        )
+
+        key_name = "test-sse-field-multipart"
+        data = b"test-sse"
+        key_id = kms_create_key()["KeyId"]
+        # if you only pass the key id, the key must be in the same region and account as the bucket
+        # otherwise, pass the ARN (always same region)
+        # but the response always return the ARN
+
+        s3_multipart_upload_with_snapshot(
+            bucket=s3_bucket,
+            key=key_name,
+            data=data,
+            snapshot_prefix="multi-sse",
+            BucketKeyEnabled=True,
+            SSEKMSKeyId=key_id,
+            ServerSideEncryption="aws:kms",
+        )
+
+        response = s3_client.get_object(Bucket=s3_bucket, Key=key_name)
+        snapshot.match("get-obj", response)
+
+    @pytest.mark.aws_validated
+    # there is currently no server side encryption is place in LS, ETag will be different
+    @pytest.mark.skip_snapshot_verify(paths=["$..ETag"])
+    @pytest.mark.skip_snapshot_verify(
+        condition=is_old_provider,
+        paths=["$..ContentLanguage", "$..SSEKMSKeyId", "$..VersionId", "$..KMSMasterKeyID"],
+    )
+    def test_s3_sse_bucket_key_default(
+        self,
+        s3_client,
+        s3_bucket,
+        kms_create_key,
+        snapshot,
+    ):
+        snapshot.add_transformer(
+            [
+                snapshot.transform.resource_name("SSEKMSKeyId"),
+                snapshot.transform.key_value(
+                    "Bucket", reference_replacement=False, value_replacement="<bucket>"
+                ),
+                snapshot.transform.key_value("UploadId"),
+                snapshot.transform.key_value("Location"),
+            ]
+        )
+        key_before_set = "test-sse-bucket-before"
+        key_after_set = "test-sse-bucket-after"
+        data = b"test-sse"
+        key_id = kms_create_key()["KeyId"]
+        response = s3_client.put_object(Bucket=s3_bucket, Key=key_before_set, Body=data)
+        snapshot.match("put-obj-default-before-setting", response)
+
+        response = s3_client.get_object(Bucket=s3_bucket, Key=key_before_set)
+        snapshot.match("get-obj-default-before-setting", response)
+
+        response = s3_client.put_bucket_encryption(
+            Bucket=s3_bucket,
+            ServerSideEncryptionConfiguration={
+                "Rules": [
+                    {
+                        "ApplyServerSideEncryptionByDefault": {
+                            "SSEAlgorithm": "aws:kms",
+                            "KMSMasterKeyID": key_id,
+                        },
+                        "BucketKeyEnabled": True,
+                    }
+                ]
+            },
+        )
+        snapshot.match("put-bucket-encryption", response)
+
+        response = s3_client.get_bucket_encryption(Bucket=s3_bucket)
+        snapshot.match("get-bucket-encryption", response)
+
+        # verify that setting BucketKeyEnabled didn't affect existing keys
+        response = s3_client.get_object(Bucket=s3_bucket, Key=key_before_set)
+        snapshot.match("get-obj-default-after-setting", response)
+
+        # set a new key and see the configuration is in effect
+        response = s3_client.put_object(Bucket=s3_bucket, Key=key_after_set, Body=data)
+        snapshot.match("put-obj-after-setting", response)
+
+        response = s3_client.get_object(Bucket=s3_bucket, Key=key_after_set)
+        snapshot.match("get-obj-after-setting", response)
 
 
 class TestS3TerraformRawRequests:
