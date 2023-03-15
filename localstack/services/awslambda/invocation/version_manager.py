@@ -258,7 +258,9 @@ class LambdaVersionManager(ServiceEndpoint):
                         self.function_arn,
                     )
                     return
-                LOG.debug("Got invocation event %s in loop", queued_invocation.request_id)
+                LOG.debug(
+                    "Got invocation event %s in loop", queued_invocation.invocation.request_id
+                )
                 # TODO refine environment startup logic
                 if self.available_environments.empty() or self.active_environment_count() == 0:
                     self.start_environment()
