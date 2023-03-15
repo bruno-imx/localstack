@@ -4,7 +4,6 @@ import logging
 import queue
 import threading
 import time
-import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from queue import Queue
@@ -50,7 +49,6 @@ LOG = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class QueuedInvocation:
-    invocation_id: str
     result_future: Future[InvocationResult] | None
     retries: int
     invocation: Invocation
@@ -260,7 +258,7 @@ class LambdaVersionManager(ServiceEndpoint):
                         self.function_arn,
                     )
                     return
-                LOG.debug("Got invocation event %s in loop", queued_invocation.invocation_id)
+                LOG.debug("Got invocation event %s in loop", queued_invocation.request_id)
                 # TODO refine environment startup logic
                 if self.available_environments.empty() or self.active_environment_count() == 0:
                     self.start_environment()
@@ -276,12 +274,14 @@ class LambdaVersionManager(ServiceEndpoint):
                             )
                             return
                         self.running_invocations[
-                            queued_invocation.invocation_id
+                            queued_invocation.invocation.request_id
                         ] = RunningInvocation(
                             queued_invocation, datetime.now(), executor=environment
                         )
                         environment.invoke(invocation_event=queued_invocation)
-                        LOG.debug("Invoke for request %s done", queued_invocation.invocation_id)
+                        LOG.debug(
+                            "Invoke for request %s done", queued_invocation.invocation.request_id
+                        )
                     except queue.Empty:
                         # TODO if one environment threw an invalid status exception, we will get here potentially with
                         # another busy environment, and won't spawn a new one as there is one active here.
@@ -298,20 +298,17 @@ class LambdaVersionManager(ServiceEndpoint):
                             "Retrieved environment %s in invalid state from queue. Trying the next...",
                             environment.id,
                         )
-                        self.running_invocations.pop(queued_invocation.invocation_id, None)
+                        self.running_invocations.pop(queued_invocation.invocation.request_id, None)
                         # try next environment
                         environment = None
             except Exception as e:
                 queued_invocation.result_future.set_exception(e)
 
     def invoke(
-        self, *, invocation: Invocation, current_retry: int = 0, invocation_id: str | None = None
+        self, *, invocation: Invocation, current_retry: int = 0
     ) -> Future[InvocationResult] | None:
         future = Future() if invocation.invocation_type == "RequestResponse" else None
-        if invocation_id is None:
-            invocation_id = str(uuid.uuid4())
         invocation_storage = QueuedInvocation(
-            invocation_id=invocation_id,
             result_future=future,
             retries=current_retry,
             invocation=invocation,
@@ -350,7 +347,7 @@ class LambdaVersionManager(ServiceEndpoint):
         else:
             LOG.warning(
                 "Received no logs from invocation with id %s for lambda %s",
-                invocation_result.invocation_id,
+                invocation_result.request_id,
                 self.function_arn,
             )
 
@@ -360,7 +357,7 @@ class LambdaVersionManager(ServiceEndpoint):
         original_invocation: RunningInvocation,
         original_payload: bytes,
     ) -> None:
-        LOG.debug("Got event invocation with id %s", invocation_result.invocation_id)
+        LOG.debug("Got event invocation with id %s", invocation_result.request_id)
 
         # 1. Handle DLQ routing
         if (
@@ -393,7 +390,7 @@ class LambdaVersionManager(ServiceEndpoint):
                 "version": "1.0",
                 "timestamp": timestamp_millis(),
                 "requestContext": {
-                    "requestId": invocation_result.invocation_id,
+                    "requestId": invocation_result.request_id,
                     "functionArn": self.function_version.qualified_arn,
                     "condition": "Success",
                     "approximateInvokeCount": original_invocation.invocation.retries + 1,
@@ -442,7 +439,6 @@ class LambdaVersionManager(ServiceEndpoint):
                     self.invoke(
                         invocation=original_invocation.invocation.invocation,
                         current_retry=previous_retry_attempts + 1,
-                        invocation_id=original_invocation.invocation.invocation_id,
                     )
                     return
 
@@ -457,7 +453,7 @@ class LambdaVersionManager(ServiceEndpoint):
                 "version": "1.0",
                 "timestamp": timestamp_millis(),
                 "requestContext": {
-                    "requestId": invocation_result.invocation_id,
+                    "requestId": invocation_result.request_id,
                     "functionArn": self.function_version.qualified_arn,
                     "condition": failure_cause,
                     "approximateInvokeCount": previous_retry_attempts + 1,

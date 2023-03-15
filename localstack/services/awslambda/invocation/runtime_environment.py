@@ -232,7 +232,7 @@ class RuntimeEnvironment:
             self.keepalive_timer.cancel()
 
         invoke_payload = {
-            "invoke-id": invocation_event.invocation_id,
+            "invoke-id": invocation_event.invocation.request_id,  # TODO: rename to request-id
             "invoked-function-arn": invocation_event.invocation.invoked_arn,
             "payload": to_str(invocation_event.invocation.payload),
         }

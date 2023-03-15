@@ -166,11 +166,13 @@ class LambdaService:
         account_id: str,
         invocation_type: InvocationType | None,
         client_context: Optional[str],
+        request_id: str,
         payload: bytes | None,
     ) -> Future[InvocationResult] | None:
         """
         Invokes a specific version of a lambda
 
+        :param request_id: context request ID
         :param function_name: Function name
         :param qualifier: Function version qualifier
         :param region: Region of the function
@@ -235,6 +237,7 @@ class LambdaService:
                 client_context=client_context,
                 invocation_type=invocation_type,
                 invoke_time=datetime.now(),
+                request_id=request_id,
             )
         )
 

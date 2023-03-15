@@ -96,6 +96,7 @@ class Invocation:
     client_context: Optional[str]
     invocation_type: InvocationType
     invoke_time: datetime
+    request_id: str
 
 
 class ArchiveCode(metaclass=ABCMeta):
@@ -453,7 +454,7 @@ class EventInvokeConfig:
 # Result Models
 @dataclasses.dataclass
 class InvocationResult:
-    invocation_id: str
+    request_id: str
     payload: bytes | None
     executed_version: str | None = None
     logs: str | None = None
@@ -461,7 +462,7 @@ class InvocationResult:
 
 @dataclasses.dataclass
 class InvocationError:
-    invocation_id: str
+    request_id: str
     payload: bytes | None
     executed_version: str | None = None
     logs: str | None = None
@@ -469,7 +470,7 @@ class InvocationError:
 
 @dataclasses.dataclass
 class InvocationLogs:
-    invocation_id: str
+    request_id: str
     logs: str
 
 
