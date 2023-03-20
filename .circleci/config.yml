@@ -78,7 +78,7 @@ jobs:
           paths:
             - repo/target/coverage/
 
-  itest-lambda-docker:
+  itest-lambda-legacy:
     executor: ubuntu-machine-amd64
     working_directory: /tmp/workspace/repo
     steps:
@@ -102,28 +102,32 @@ jobs:
             docker pull -q lambci/lambda:java8.al2
             docker pull -q lambci/lambda:java11
       - run:
-          name: Test Docker client
+          name: Test 'local' Lambda executor
           environment:
-            TEST_PATH: "tests/integration/docker_utils"
-            TEST_SKIP_LOCALSTACK_START: 1
-            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/docker-client.xml -o junit_suite_name='docker-client'"
+            LAMBDA_EXECUTOR: "local"
+            PROVIDER_OVERRIDE_LAMBDA: "legacy"
+            USE_SSL: 1
+            TEST_PATH: "tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py"
+            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'"
             COVERAGE_ARGS: "-p"
           command: make test-coverage
       - run:
           name: Test 'docker' Lambda executor
           environment:
             LAMBDA_EXECUTOR: "docker"
+            PROVIDER_OVERRIDE_LAMBDA: "legacy"
             USE_SSL: 1
             TEST_PATH: "tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py"
-            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/lambda-docker.xml -o junit_suite_name='lambda-docker'"
+            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-docker'"
             COVERAGE_ARGS: "-p"
           command: make test-coverage
       - run:
           name: Test 'docker-reuse' Lambda executor
           environment:
             LAMBDA_EXECUTOR: "docker-reuse"
+            PROVIDER_OVERRIDE_LAMBDA: "legacy"
             TEST_PATH: "tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py"
-            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/lambda-docker-reuse.xml -o junit_suite_name='lambda-docker-reuse'"
+            PYTEST_ARGS: "--reruns 2 --junitxml=target/reports/lambda-docker-reuse.xml -o junit_suite_name='legacy-lambda-docker-reuse'"
             COVERAGE_ARGS: "-p"
           command: make test-coverage
       - run:
@@ -256,7 +260,7 @@ jobs:
       image: << parameters.machine_image >>
     resource_class: << parameters.resource_class >>
     working_directory: /tmp/workspace/repo
-    parallelism: 2
+    parallelism: 4
     steps:
       - attach_workspace:
           at: /tmp/workspace
@@ -432,7 +436,7 @@ workflows:
       - preflight:
           requires:
             - install
-      - itest-lambda-docker:
+      - itest-lambda-legacy:
           requires:
             - preflight
       - itest-s3-asf-provider:
@@ -485,7 +489,7 @@ workflows:
             - docker-build-amd64
       - report:
           requires:
-            - itest-lambda-docker
+            - itest-lambda-legacy
             - itest-s3-asf-provider
             - itest-sfn-v2-provider
             - docker-test-amd64
@@ -498,7 +502,7 @@ workflows:
             branches:
               only: master
           requires:
-            - itest-lambda-docker
+            - itest-lambda-legacy
             - itest-s3-asf-provider
             - itest-sfn-v2-provider
             - docker-test-amd64
