@@ -267,6 +267,13 @@ jobs:
       - run:
           name: Load docker localstack-full image
           command: docker load -i target/localstack-docker-images-<< parameters.platform >>.tar
+      - when:
+          condition:
+            equal: [ "amd64", << parameters.platform >>]
+          steps:
+            - run:
+                name: pre-build lambda common test packages
+                command: ./scripts/build_common_test_functions.sh `pwd`/tests/integration/awslambda/functions/common
       - run:
           name: Run integration tests
           # circleci split returns newline separated list, so `tr` is necessary to prevent problems in the Makefile
