@@ -118,7 +118,7 @@ TEST_LAMBDA_LIBS = [
     "requests",
     "psutil",
     "urllib3",
-    "chardet",
+    "charset_normalizer",
     "certifi",
     "idna",
     "pip",

@@ -271,7 +271,6 @@ class TestLambdaDestinationSqs:
             handler_file=os.path.join(os.path.dirname(__file__), "./functions/lambda_echofail.py"),
             func_name=fn_name,
             runtime=Runtime.python3_9,
-            libs=TEST_LAMBDA_LIBS,
             role=lambda_su_role,
         )
         lambda_client.put_function_event_invoke_config(
@@ -380,7 +379,6 @@ class TestLambdaDestinationSqs:
         create_lambda_function(
             handler_file=os.path.join(os.path.dirname(__file__), "./functions/lambda_echofail.py"),
             func_name=fn_name,
-            libs=TEST_LAMBDA_LIBS,
             role=lambda_su_role,
         )
         lambda_client.put_function_event_invoke_config(
