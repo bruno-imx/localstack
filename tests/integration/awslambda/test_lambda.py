@@ -327,6 +327,7 @@ class TestLambdaBehavior:
             "$..Payload.paths._var_task_uid",
         ],
     )
+    @pytest.mark.skipif(get_arch() == "arm64", reason="Cannot inspect x86 runtime on arm")
     @pytest.mark.aws_validated
     def test_runtime_introspection_x86(self, lambda_client, create_lambda_function, snapshot):
         func_name = f"test_lambda_x86_{short_uid()}"
@@ -427,10 +428,7 @@ class TestLambdaBehavior:
         assert lambda_arch == native_arch
 
     @pytest.mark.skipif(is_old_provider(), reason="unsupported in old provider")
-    @pytest.mark.skipif(
-        not is_arm_compatible() and not is_aws(),
-        reason="ARM architecture not supported on this host",
-    )
+    @pytest.mark.skip  # TODO remove once is_arch_compatible checks work properly
     @pytest.mark.aws_validated
     def test_mixed_architecture(self, lambda_client, create_lambda_function):
         """Test emulation and interaction of lambda functions with different architectures.
