@@ -121,7 +121,7 @@
     }
   },
   "tests/integration/awslambda/test_lambda_destinations.py::TestLambdaDestinationSqs::test_assess_lambda_destination_invocation[payload0]": {
-    "recorded-date": "22-03-2023, 18:42:11",
+    "recorded-date": "23-03-2023, 00:15:17",
     "recorded-content": {
       "put_function_event_invoke_config": {
         "DestinationConfig": {
@@ -184,7 +184,7 @@
     }
   },
   "tests/integration/awslambda/test_lambda_destinations.py::TestLambdaDestinationSqs::test_assess_lambda_destination_invocation[payload1]": {
-    "recorded-date": "22-03-2023, 18:42:16",
+    "recorded-date": "23-03-2023, 00:15:20",
     "recorded-content": {
       "put_function_event_invoke_config": {
         "DestinationConfig": {
@@ -226,6 +226,7 @@
               "responsePayload": {
                 "errorMessage": "Test exception (this is intentional)",
                 "errorType": "Exception",
+                "requestId": "<uuid:1>",
                 "stackTrace": [
                   "  File \"/var/task/handler.py\", line 54, in handler\n    raise Exception(\"Test exception (this is intentional)\")\n"
                 ]
@@ -532,7 +533,7 @@
     }
   },
   "tests/integration/awslambda/test_lambda_destinations.py::TestLambdaDestinationSqs::test_lambda_destination_default_retries": {
-    "recorded-date": "22-03-2023, 19:02:29",
+    "recorded-date": "23-03-2023, 00:18:52",
     "recorded-content": {
       "put_function_event_invoke_config": {
         "DestinationConfig": {
@@ -573,6 +574,7 @@
               "responsePayload": {
                 "errorMessage": "Test exception (this is intentional)",
                 "errorType": "Exception",
+                "requestId": "<uuid:1>",
                 "stackTrace": [
                   "  File \"/var/task/handler.py\", line 54, in handler\n    raise Exception(\"Test exception (this is intentional)\")\n"
                 ]
