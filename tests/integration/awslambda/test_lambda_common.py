@@ -252,6 +252,9 @@ class TestLambdaRuntimesCommon:
     condition=is_old_provider(),
     reason="Local executor does not support the majority of the runtimes",
 )
+@pytest.mark.skipif(
+    condition=platform.machine() != "x86_64", reason="build process doesn't support arm64 right now"
+)
 class TestLambdaCallingLocalstack:
     @pytest.mark.multiruntime(
         scenario="endpointinjection",
