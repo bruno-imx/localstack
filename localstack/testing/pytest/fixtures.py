@@ -1383,8 +1383,8 @@ def create_lambda_function_aws(
     lambda_arns = []
 
     def _create_lambda_function(**kwargs):
-        if get_arch() == "arm64" and "Architecture" not in kwargs:
-            kwargs["Architecture"] = "arm64"
+        if get_arch() == "arm64" and "Architectures" not in kwargs:
+            kwargs["Architectures"] = ["arm64"]
 
         def _create_function():
             resp = lambda_client.create_function(**kwargs)
@@ -1436,8 +1436,8 @@ def create_lambda_function(
         if not kwargs.get("role"):
             kwargs["role"] = lambda_su_role
 
-        if get_arch() == "arm64":
-            kwargs["Architecture"] = "arm64"
+        if get_arch() == "arm64" and "Architectures" not in kwargs:
+            kwargs["Architectures"] = ["arm64"]
 
         def _create_function():
             resp = testutil.create_lambda_function(func_name, **kwargs)
