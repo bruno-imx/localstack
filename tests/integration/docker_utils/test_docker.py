@@ -11,6 +11,7 @@ import pytest
 
 from localstack import config
 from localstack.config import in_docker
+from localstack.utils import docker_utils
 from localstack.utils.common import is_ipv4_address, safe_run, save_file, short_uid, to_str
 from localstack.utils.container_utils.container_client import (
     AccessDenied,
@@ -1378,6 +1379,7 @@ class TestDockerPorts:
             pytest.skip("Running test only for one Docker executor")
 
         monkeypatch.setattr(config, "PORTS_CHECK_DOCKER_IMAGE", "alpine")
+        monkeypatch.setattr(docker_utils._State, "ports_check_docker_image", None)
 
         # reserve available container port
         port = reserve_available_container_port(duration=1)
@@ -1408,6 +1410,7 @@ class TestDockerPorts:
             pytest.skip("Running test only for one Docker executor")
 
         monkeypatch.setattr(config, "PORTS_CHECK_DOCKER_IMAGE", "alpine")
+        monkeypatch.setattr(docker_utils._State, "ports_check_docker_image", None)
 
         # reserve available container port
         port = reserve_available_container_port(duration=1)
