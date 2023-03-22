@@ -28,7 +28,7 @@ from localstack.testing.snapshots.transformer_utility import PATTERN_UUID
 from localstack.utils import files, platform, testutil
 from localstack.utils.files import load_file
 from localstack.utils.http import safe_requests
-from localstack.utils.platform import is_arm_compatible, standardized_arch
+from localstack.utils.platform import get_arch, is_arm_compatible, standardized_arch
 from localstack.utils.strings import short_uid, to_bytes, to_str
 from localstack.utils.sync import retry, wait_until
 from localstack.utils.testutil import create_lambda_archive
@@ -96,7 +96,7 @@ PYTHON_TEST_RUNTIMES = (
         Runtime.python3_8,
         Runtime.python3_9,
     ]
-    if not is_old_provider() or use_docker()
+    if (not is_old_provider() or use_docker()) and get_arch() != "arm64"
     else [Runtime.python3_9]
 )
 NODE_TEST_RUNTIMES = (
@@ -110,21 +110,9 @@ JAVA_TEST_RUNTIMES = (
         Runtime.java8_al2,
         Runtime.java11,
     ]
-    if not is_old_provider() or use_docker()
+    if (not is_old_provider() or use_docker()) and get_arch() != "arm64"
     else [Runtime.java11]
 )
-
-
-PROVIDED_TEST_RUNTIMES = [
-    Runtime.provided,
-    # TODO remove skip once we use correct images
-    pytest.param(
-        Runtime.provided_al2,
-        marks=pytest.mark.skipif(
-            is_old_provider(), reason="curl missing in provided.al2 lambci image"
-        ),
-    ),
-]
 
 TEST_LAMBDA_LIBS = [
     "requests",

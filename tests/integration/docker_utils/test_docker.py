@@ -85,7 +85,7 @@ def create_container(docker_client: ContainerClient, create_network):
 
 
 @pytest.fixture
-def create_network():
+def create_network(docker_client: ContainerClient):
     """
     Uses the factory as fixture pattern to wrap the creation of networks as a factory that
     removes the networks after the fixture is cleaned up.
@@ -93,7 +93,7 @@ def create_network():
     networks = []
 
     def _create_network(network_name: str):
-        network_id = safe_run([config.DOCKER_CMD, "network", "create", network_name]).strip()
+        network_id = docker_client.create_network(network_name=network_name)
         networks.append(network_id)
         return network_id
 
@@ -102,9 +102,9 @@ def create_network():
     for network in networks:
         try:
             LOG.debug("Removing network %s", network)
-            safe_run([config.DOCKER_CMD, "network", "remove", network])
-        except CalledProcessError:
-            pass
+            docker_client.delete_network(network_name=network)
+        except ContainerException as e:
+            LOG.debug("Error while cleaning up network %s: %s", network, e)
 
 
 class TestDockerClient:
@@ -1220,6 +1220,15 @@ class TestDockerImages:
 
 
 class TestDockerNetworking:
+    def test_network_lifecycle(self, docker_client: ContainerClient):
+        network_name = f"test-network-{short_uid()}"
+        network_id = docker_client.create_network(network_name=network_name)
+        assert network_name == docker_client.inspect_network(network_name=network_name)["Name"]
+        assert network_id == docker_client.inspect_network(network_name=network_name)["Id"]
+        docker_client.delete_network(network_name=network_name)
+        with pytest.raises(NoSuchNetwork):
+            docker_client.inspect_network(network_name=network_name)
+
     def test_get_container_ip_with_network(
         self, docker_client: ContainerClient, create_container, create_network
     ):

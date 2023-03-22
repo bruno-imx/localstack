@@ -43,6 +43,7 @@ from localstack.utils.functions import run_safe
 from localstack.utils.http import safe_requests as requests
 from localstack.utils.json import json_safe
 from localstack.utils.net import wait_for_port_open
+from localstack.utils.platform import get_arch
 from localstack.utils.strings import short_uid, to_str
 from localstack.utils.sync import ShortCircuitWaitException, poll_condition, retry, wait_until
 from localstack.utils.testutil import start_http_server
@@ -1382,6 +1383,9 @@ def create_lambda_function_aws(
     lambda_arns = []
 
     def _create_lambda_function(**kwargs):
+        if get_arch() == "arm64" and "Architecture" not in kwargs:
+            kwargs["Architecture"] = "arm64"
+
         def _create_function():
             resp = lambda_client.create_function(**kwargs)
             lambda_arns.append(resp["FunctionArn"])
@@ -1431,6 +1435,9 @@ def create_lambda_function(
 
         if not kwargs.get("role"):
             kwargs["role"] = lambda_su_role
+
+        if get_arch() == "arm64":
+            kwargs["Architecture"] = "arm64"
 
         def _create_function():
             resp = testutil.create_lambda_function(func_name, **kwargs)

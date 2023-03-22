@@ -135,6 +135,7 @@ class TestLambdaDestinationSqs:
         queue_arn = sqs_queue_arn(queue_url)
         create_lambda_function(
             handler_file=TEST_LAMBDA_PYTHON,
+            runtime=Runtime.python3_9,
             func_name=lambda_name,
             role=lambda_su_role,
         )
@@ -269,6 +270,7 @@ class TestLambdaDestinationSqs:
         create_lambda_function(
             handler_file=os.path.join(os.path.dirname(__file__), "./functions/lambda_echofail.py"),
             func_name=fn_name,
+            runtime=Runtime.python3_9,
             libs=TEST_LAMBDA_LIBS,
             role=lambda_su_role,
         )
