@@ -4,14 +4,13 @@ import logging
 import os
 import re
 import time
-from subprocess import CalledProcessError
 from typing import NamedTuple
 
 import pytest
 
 from localstack import config
 from localstack.config import in_docker
-from localstack.utils.common import is_ipv4_address, safe_run, save_file, short_uid, to_str
+from localstack.utils.common import is_ipv4_address, save_file, short_uid, to_str
 from localstack.utils.container_utils.container_client import (
     AccessDenied,
     ContainerClient,
@@ -311,7 +310,9 @@ class TestDockerClient:
     ):
         network_name = f"test-network-{short_uid()}"
         network_id = create_network(network_name)
-        safe_run(["docker", "network", "connect", network_id, dummy_container.container_id])
+        docker_client.connect_container_to_network(
+            network_name=network_id, container_name_or_id=dummy_container.container_id
+        )
         docker_client.start_container(dummy_container.container_id)
         networks = docker_client.get_networks(dummy_container.container_id)
         assert network_name in networks
@@ -323,7 +324,9 @@ class TestDockerClient:
     ):
         network_name = f"test-network-{short_uid()}"
         network_id = create_network(network_name)
-        safe_run(["docker", "network", "connect", network_id, dummy_container.container_id])
+        docker_client.connect_container_to_network(
+            network_name=network_id, container_name_or_id=dummy_container.container_id
+        )
         docker_client.start_container(dummy_container.container_id)
         result_bridge_network = docker_client.get_container_ipv4_for_network(
             container_name_or_id=dummy_container.container_id, container_network="bridge"
@@ -685,7 +688,7 @@ class TestDockerClient:
     def test_get_container_entrypoint_not_pulled_image(self, docker_client: ContainerClient):
         try:
             docker_client.get_image_cmd("alpine", pull=False)
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
+            docker_client.remove_image("alpine")
         except ContainerException:
             pass
         entrypoint = docker_client.get_image_entrypoint("alpine")
@@ -698,7 +701,7 @@ class TestDockerClient:
     def test_get_container_command_not_pulled_image(self, docker_client: ContainerClient):
         try:
             docker_client.get_image_cmd("alpine", pull=False)
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
+            docker_client.remove_image("alpine")
         except ContainerException:
             pass
         command = docker_client.get_image_cmd("alpine")
@@ -865,7 +868,7 @@ class TestDockerClient:
     def test_pull_docker_image(self, docker_client: ContainerClient):
         try:
             docker_client.get_image_cmd("alpine", pull=False)
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
+            docker_client.remove_image("alpine")
         except ContainerException:
             pass
         with pytest.raises(NoSuchImage):
@@ -882,7 +885,7 @@ class TestDockerClient:
     def test_pull_docker_image_with_tag(self, docker_client: ContainerClient):
         try:
             docker_client.get_image_cmd("alpine", pull=False)
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
+            docker_client.remove_image("alpine")
         except ContainerException:
             pass
         with pytest.raises(NoSuchImage):
@@ -895,7 +898,7 @@ class TestDockerClient:
     def test_pull_docker_image_with_hash(self, docker_client: ContainerClient):
         try:
             docker_client.get_image_cmd("alpine", pull=False)
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
+            docker_client.remove_image("alpine")
         except ContainerException:
             pass
         with pytest.raises(NoSuchImage):
@@ -918,8 +921,8 @@ class TestDockerClient:
     @pytest.mark.skip_offline
     def test_run_container_automatic_pull(self, docker_client: ContainerClient):
         try:
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
-        except CalledProcessError:
+            docker_client.remove_image("alpine")
+        except ContainerException:
             pass
         message = "test message"
         stdout, _ = docker_client.run_container("alpine", command=["echo", message], remove=True)
@@ -1008,8 +1011,8 @@ class TestDockerClient:
     @pytest.mark.skip_offline
     def test_run_container_non_existent_image(self, docker_client: ContainerClient):
         try:
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
-        except CalledProcessError:
+            docker_client.remove_image("alpine")
+        except ContainerException:
             pass
         with pytest.raises(NoSuchImage):
             stdout, _ = docker_client.run_container(
@@ -1035,8 +1038,8 @@ class TestDockerClient:
     @pytest.mark.skip_offline
     def test_docker_image_names(self, docker_client: ContainerClient):
         try:
-            safe_run([config.DOCKER_CMD, "rmi", "alpine"])
-        except CalledProcessError:
+            docker_client.remove_image("alpine")
+        except ContainerException:
             pass
         assert "alpine:latest" not in docker_client.get_docker_image_names()
         assert "alpine" not in docker_client.get_docker_image_names()

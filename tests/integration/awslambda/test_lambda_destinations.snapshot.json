@@ -403,7 +403,7 @@
     }
   },
   "tests/integration/awslambda/test_lambda_destinations.py::TestLambdaDestinationSqs::test_retries": {
-    "recorded-date": "27-02-2023, 16:12:55",
+    "recorded-date": "22-03-2023, 18:50:18",
     "recorded-content": {
       "queue_destination_payload": {
         "Messages": [
@@ -434,6 +434,7 @@
               "responsePayload": {
                 "errorMessage": "intentional failure",
                 "errorType": "Exception",
+                "requestId": "<uuid:1>",
                 "stackTrace": [
                   "  File \"/var/task/handler.py\", line 7, in handler\n    raise Exception(\"intentional failure\")\n"
                 ]
@@ -452,7 +453,7 @@
     }
   },
   "tests/integration/awslambda/test_lambda_destinations.py::TestLambdaDestinationSqs::test_maxeventage": {
-    "recorded-date": "27-02-2023, 16:14:27",
+    "recorded-date": "22-03-2023, 18:52:05",
     "recorded-content": {
       "no_retry_failure_message": {
         "Attributes": {
@@ -481,6 +482,7 @@
           "responsePayload": {
             "errorMessage": "intentional failure",
             "errorType": "Exception",
+            "requestId": "<uuid:1>",
             "stackTrace": [
               "  File \"/var/task/handler.py\", line 7, in handler\n    raise Exception(\"intentional failure\")\n"
             ]
@@ -517,6 +519,7 @@
           "responsePayload": {
             "errorMessage": "intentional failure",
             "errorType": "Exception",
+            "requestId": "<uuid:3>",
             "stackTrace": [
               "  File \"/var/task/handler.py\", line 7, in handler\n    raise Exception(\"intentional failure\")\n"
             ]
